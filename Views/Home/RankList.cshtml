@@ -1,0 +1,90 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>排行榜</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <style type="text/css">
+        /*头像不超出*/
+        img {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+        }
+
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+    <script>
+       //格式化信息（确保强制换行）
+        function formatterforwrap(val, row, index) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + val + "</p>"
+        }
+
+        //格式化头衔
+        function rankformatter(val, row) {
+            var ranks = ["无头衔", "坚韧黑铁", "英勇黄铜", "不屈白银", "荣耀黄金", "华贵铂金", "璀璨钻石", "超凡大师", "傲世宗师", "最强王者", "无上至尊"]
+            var rank = ranks[val]
+            return "<img src='/Attached/default/title/" + val + ".png' style='height:25px'/><p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + rank + "[" + val + "]</p>"
+        }
+    </script>
+</head>
+<body class="easyui-layout">
+    <div data-options="region:'west',title:'金币榜',collapsible:false" style="width:33%;padding:10px;">
+        <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid1"
+               url='/Home/GetGoldList'
+               fitColumns=true fit=true singleSelect=true
+               pagination=true pageList="[10]" pageSize="10">
+            <thead>
+                <tr>
+                    <th data-options="field:'NickName',width:100,align:'center'" formatter="formatterforwrap">用户昵称</th>
+                    <th data-options="field:'Rank',width:50,align:'center'" formatter="rankformatter">头衔</th>
+                    <th data-options="field:'MVCGold',width:50,align:'center'" formatter="formatterforwrap">金币</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+    <div data-options="region:'center',title:'等级榜'" style="width:33%;padding:10px;">
+            <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid2"
+                   url='/Home/GetLvList'
+                   fitColumns=true fit=true singleSelect=true
+                   pagination=true pageList="[10]" pageSize="10">
+                <thead>
+                    <tr>
+                        <th data-options="field:'NickName',width:100,align:'center'" formatter="formatterforwrap">用户昵称</th>
+                        <th data-options="field:'Rank',width:50,align:'center'" formatter="rankformatter">头衔</th>
+                        <th data-options="field:'Lv',width:50,align:'center'" formatter="formatterforwrap">等级</th>
+                        <th data-options="field:'Exp',width:50,align:'center'" formatter="formatterforwrap">经验</th>
+                    </tr>
+                </thead>
+            </table>
+    </div>
+    <div data-options="region:'east',title:'头衔榜',collapsible:false" style="width:33%;padding:10px;">
+            <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid3"
+                   url='/Home/GetRankList'
+                   fitColumns=true fit=true singleSelect=true
+                   pagination=true pageList="[10]" pageSize="10">
+                <thead>
+                    <tr>
+                        <th data-options="field:'NickName',width:100,align:'center'" formatter="formatterforwrap">用户昵称</th>
+                        <th data-options="field:'Rank',width:50,align:'center'" formatter="rankformatter">头衔</th>
+                        <th data-options="field:'GetRankTime',width:75,align:'center'" formatter="formatterforwrap">获得时间</th>
+                    </tr>
+                </thead>
+            </table>
+    </div>
+</body>
+</html>

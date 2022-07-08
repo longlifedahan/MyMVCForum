@@ -1,0 +1,204 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>我的回复</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <style type="text/css">
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        div {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        span {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        a {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+
+    <script type="text/javascript">
+        //得到序号的formatter
+        function getindex(val, row, index) {
+            //当前页数
+            var currPageNumber = $("#mydatagrid6").datagrid("getPager").data("pagination").options.pageNumber;
+            //当前页面大小
+            var currPageSize = $("#mydatagrid6").datagrid("getPager").data("pagination").options.pageSize;
+            //楼层数
+            var floor = (currPageNumber - 1) * currPageSize + index + 1;
+            return floor
+        }
+
+        //格式化帖子类型
+        function typeformatter(val, row, index) {
+            var out = "无"
+            if (val == 1) {
+                out = "版务"
+            } else if (val == 2) {
+                out = "二次元"
+            } else if (val == 3) {
+                out = "游戏"
+            } else if (val == 4) {
+                out = "小说"
+            } else if (val == 5) {
+                out = "技术"
+            } else if (val == 6) {
+                out = "杂谈"
+            }
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + out + "</p>"
+        }
+
+        //帖子详情的formatter
+        function detail(val, row, index) {
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="jump()">查看</a>';
+        }
+
+        //具体跳转
+        function jump(event) {
+            var jq = top.jQuery;//获得最父亲的jquery操作句柄
+            var postid = window.event.target.name
+            var url = "/Home/PostDetail/" + postid
+            var content = '<iframe src="' + url + '"width="100%" height="99%" frameborder="0"></iframe>';
+            $.ajax({
+                url: "/Home/GetPostName",
+                type: "Post",
+                data: {
+                    "id": postid
+                },
+                success: function (result) {
+                    jq("#mytab").tabs('add', {
+                        title: result,
+                        content: content,
+                        closable: true,
+                        iconCls: 'icon-ok'
+                    });
+                }
+            })
+        }
+
+        //帖子预览的formatter
+        function detail2(val, row, index) {
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="jump2()">预览</a>';
+        }
+
+        //预览详情
+        function jump2(event) {
+            var jq = top.jQuery;//获得最父亲的jquery操作句柄
+            var postid = window.event.target.name
+            $.ajax({
+                url: "/Home/PostPreview",
+                type: "Post",
+                data: {
+                    "postid": postid
+                },
+                success: function (result) {
+                    var out = "无分类"
+                    if (result.Type == 1) {
+                        out = "版务"
+                    } else if (result.Type == 2) {
+                        out = "二次元"
+                    } else if (result.Type == 3) {
+                        out = "游戏"
+                    } else if (result.Type == 4) {
+                        out = "小说"
+                    } else if (result.Type == 5) {
+                        out = "技术"
+                    } else if (result.Type == 6) {
+                        out = "杂谈"
+                    }
+                    var ranks = ["无头衔", "坚韧黑铁", "英勇黄铜", "不屈白银", "荣耀黄金", "华贵铂金", "璀璨钻石", "超凡大师", "傲世宗师", "最强王者", "无上至尊"]
+                    var rank = ranks[result.Rank]
+                    var returnvalue = ""
+                    returnvalue += "<p style='text-align:center'>"
+                    returnvalue += "<label style='font-weight:bold;font-size:large'>主题：" + result.Title + "</label>"
+                    returnvalue += "</p>"
+                    returnvalue += "[" + (result.IsTop == "1" ? "置顶" : "普通") + "][" + out + "][浏览次数:" + result.AccessTime + "][回复次数:" + result.Replys + "][点赞次数:" + result.Likes + "]<br />"
+                    returnvalue += "<img src='/Heads/" + result.Head + "' style='height:32px;float:left'/>";
+                    returnvalue += "<label style='font-weight:bold'>[楼主：" + result.NickName + "(等级:" + result.Lv + ")][身份：" + (result.Identity == 0 ? "超管" : (result.identity == 1 ? "管理" : "用户")) + "]"
+                    returnvalue += "[头衔：" + rank + "]</label>"
+                    returnvalue += "<img style='height:15px;border:groove;' src='/Attached/default/title/" + result.Rank + ".png'/><br />"
+                    returnvalue += "<label style='font-weight:bold'>发帖时间：" + result.Time + "</label><br />"
+                    returnvalue += result.Content
+                    jq('#postpreview').html(returnvalue)
+                }
+            })
+            jq('#postpreview').dialog('open')
+        }
+
+        //格式化信息（确保强制换行）
+        function nameformatterforpost(val, row, index) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + val + "</p>"
+        }
+
+        //查看回复详情
+        function detail3(val, row, index) {
+            return '<a href="javascript:void(0)" name=' + row.ReplyId + ' onclick="jump3()">预览</a>';
+        }
+
+        //查看回复详情
+        function jump3(event) {
+            var jq = top.jQuery;//获得最父亲的jquery操作句柄
+            var replyid = window.event.target.name
+            $.ajax({
+                url: "/Home/GetAReply",
+                type: "Post",
+                data: {
+                    "replyid": replyid
+                },
+                success: function (result) {                    
+                    jq('#postpreview').html(result)
+                }
+            })
+            jq('#postpreview').dialog('open')
+        }
+    </script>
+</head>
+<body>
+    <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid6"
+           url='/Home/GetMyReplys'
+           fitColumns=true fit=true
+           singleSelect=true
+           pagination=true pageList="[10,20,30,40,50]" pageSize="20">
+        <!--使用fit适配页面，这样可以嵌套进iframe里，并且有内部滚动条，fitcolumns则是页面放宽-->
+        <thead>
+            <tr>
+                <th data-options="field:'None1',width:25,align:'center'" formatter="getindex">序号</th>
+                <th data-options="field:'Title',width:75,align:'center'" formatter="nameformatterforpost">帖子名称</th>
+                <th data-options="field:'Type',width:25,align:'center'" formatter="typeformatter">分类</th>
+                <th data-options="field:'Content_Short',width:175,align:'center'" formatter="nameformatterforpost">回复粗览</th>
+                <th data-options="field:'None2',width:25,align:'center'" formatter="detail3">回复详情</th>
+                <th data-options="field:'Time',width:50,align:'center'" formatter="nameformatterforpost">回复时间</th>
+                <th data-options="field:'None3',width:25,align:'center'" formatter="detail">帖子详情</th>
+                <th data-options="field:'None4',width:25,align:'center'" formatter="detail2">预览帖子</th>
+            </tr>
+        </thead>
+    </table>
+</body>
+</html>

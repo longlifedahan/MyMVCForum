@@ -1,0 +1,211 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>论坛注册界面（手机）</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.form.min.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <style type="text/css">
+        body {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .back1 {
+            width: 100%;
+            height: 250px;
+            padding-top: 40px;
+            text-align: center;
+            background-color: deepskyblue;
+        }
+
+        .back2 {
+            width: 100%;
+            height: 500px;
+            background-color: lightgray;
+        }
+
+        .back3 {
+            width: 100%;
+            height: 550px;
+            position: absolute;
+            top: 150px;
+            left: 0%;
+            text-align: center;
+            background-color: white;
+        }
+
+        td {
+            padding: 2px 2px 2px 2px
+        }
+    </style>
+
+    <script type="text/javascript">
+        var passshow = false;
+        function showpassword() {
+            //现在展示则隐藏
+            if (passshow) {
+                passshow = false;
+                $("#password").attr("type", "password")
+                $("#showpassbutton").html("显示密码")
+            }
+            //现在隐藏则展示
+            else {
+                passshow = true;
+                $("#password").attr("type", "input")
+                $("#showpassbutton").html("不显示密码")
+            }
+            return false;
+        }
+
+        var passshow2 = false;
+        function showpassword2() {
+            //现在展示则隐藏
+            if (passshow2) {
+                passshow2 = false;
+                $("#password2").attr("type", "password")
+                $("#showpassbutton2").html("显示密码")
+            }
+            //现在隐藏则展示
+            else {
+                passshow2 = true;
+                $("#password2").attr("type", "input")
+                $("#showpassbutton2").html("不显示密码")
+            }
+            return false;
+        }
+
+        //验证是不是邮箱
+        function isEmail(strEmail) {
+            var reg = /^([A-Za-z0-9_\-\.])+\@@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/
+            if (reg.test(strEmail)) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+
+        //提交数据
+        function doreg() {
+            if ($("#username").val() == "" || $("#nickname").val() == "" || $("#password").val() == "" || $("#password2").val() == "" || $("#mailbox").val() == "") {
+                alert("用户名、密码、密码确认、邮箱、昵称不得为空")
+                return false;
+            }
+            if ($("#password").val() != $("#password2").val()) {
+                alert("两次输入的密码不相同")
+                return false;
+            }
+
+            if (!isEmail($("#mailbox").val())) {
+                alert("邮箱非法")
+                return false;
+            }
+
+            $("#regbutton").attr("disabled", true)
+            $("#myform").ajaxSubmit({
+                url: "/Home/DoReg", //上传文件的路径
+                type: "POST",
+                success: function (data) {
+                    alert(data);
+                    $("#regbutton").attr("disabled", false)
+                    dorefresh();//刷新验证码
+                }
+            });
+        }
+
+        //刷新图片
+        function dorefresh() {
+            $("#verifycode").attr("src", $("#verifycode").attr("src") + 1)
+        }
+    </script>
+</head>
+
+<body>
+    <div class="back1">
+        <label style="color:white;font-size:xx-large;font-weight:bold;">我的MVC论坛</label>
+        <br />
+        <label style="color:white;font-size:x-large;font-weight:bold;">www.mymvcforum.com</label>
+    </div>
+    <div class="back2">
+
+    </div>
+    <div class="back3">
+        <h2 style="color:blue;margin-bottom:30px;margin-top:40px;">注册</h2>
+        <form id="myform">
+            <table style="width:100%;">
+                <tr>
+                    <td style="width:20%">用户名</td>
+                    <td>
+                        <input id="username" name="username" style="width:90%;height:25px;border-color:gray;background-color:lightblue;" title="用于登录，不可重复，不可修改，请谨慎选择！" />
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">昵&nbsp;&nbsp;&nbsp;称</td>
+                    <td>
+                        <input id="nickname" name="nickname" style="width:90%;height:25px;border-color:gray;background-color:lightblue;" title="可随时修改，可随意填写，不可为空" />
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">密&nbsp;&nbsp;&nbsp;码</td>
+                    <td>
+                        <input id="password" name="password" type="password" style="width:70%;height:25px;border-color:gray;background-color:lightblue;" />
+                        <button id="showpassbutton" type="button" style="width:20%;height:30px;" onclick="showpassword()">显示</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">确&nbsp;&nbsp;&nbsp;认</td>
+                    <td>
+                        <input id="password2" name="password2" type="password" style="width:70%;height:25px;border-color:gray;background-color:lightblue;" />
+                        <button id="showpassbutton2" type="button" style="width:20%;height:30px;" onclick="showpassword2()">显示</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">头&nbsp;&nbsp;&nbsp;像</td>
+                    <td>
+                        <input id="head" name="head" type="file" style="width:90%;height:25px;border-color:gray;background-color:lightblue;" />
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">描&nbsp;&nbsp;&nbsp;述</td>
+                    <td>
+                        <textarea id="disc" name="disc" style="width:90%;resize:none;height:60px;">请输入自我描述</textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">邮&nbsp;&nbsp;&nbsp;箱</td>
+                    <td>
+                        <input id="mailbox" name="mailbox" type="text" style="width:90%;height:25px;border-color:gray;background-color:lightblue;" title="关系密码找回，请认真填写" />
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:20%">验证码</td>
+                    <td>
+                        <input id="inputcode" name="inputcode" type="text" style="width:50%;height:25px;border-color:gray;background-color:lightblue;" title="不区分大小写" />
+                        <img src="/Home/GetPic/1" id="verifycode" alt="验证码获取失败" title="验证码" style="border:1px solid black;vertical-align:middle;width:20%;height:30px" />
+                        <input type="button" id="refresh" name="refresh" value="刷新" style="width:20%;height:30px;" onclick="dorefresh()" />
+                    </td>
+                </tr>
+            </table>
+            <p style="margin-top:10px;margin-bottom:15px;">
+                <button id="regbutton" type="button" style="width:95%;background-color:blue;color:white;height:35px;" onclick="doreg()">立即注册</button>
+            </p>
+            <p>
+                已有账号，
+                <a href="/Home/Login">立刻登录</a>
+            </p>
+        </form>
+    </div>
+</body>
+</html>
+
+

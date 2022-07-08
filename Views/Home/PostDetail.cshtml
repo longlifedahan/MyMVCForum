@@ -1,0 +1,673 @@
+﻿@using MyForum.Models;
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>帖子详情</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <!--kinddeitor-->
+    <link href="~/kindeditor/themes/default/default.css" rel="stylesheet" />
+    <link href="~/kindeditor/plugins/code/prettify.css" rel="stylesheet" />
+    <script src="~/kindeditor/kindeditor-all.js"></script>
+    <script src="~/kindeditor/lang/zh-CN.js"></script>
+    <script src="~/kindeditor/plugins/code/prettify.js"></script>
+    <style type="text/css">
+        /*图片超过缩放*/
+        img {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+        }
+
+        /*视频自动换行*/
+        embed {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+            max-height: 500px;
+        }
+
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        div {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        span {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        a {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+
+    <!--普通代码-->
+    <script type="text/javascript">
+        //各种初始化
+        $(function () {
+            //datagrid初始化
+            $("#mydatagrid").datagrid("reload", {
+                "postid": $("#postid").val()
+            });
+            //关闭回复帖子
+            $('#replypost').dialog('close')
+            //关闭用户详细信息
+            $('#userdetail').dialog('close')
+            //关闭打赏金币
+            $('#givegold').dialog('close')
+            //kindeditor初始化
+            var editor = KindEditor.create("#SendReply", {
+                resizeType: 0, width: "100%", height: "400px",
+                cssPath: '/kindeditor/plugins/code/prettify.css',
+                uploadJson: '/App_Start/upload_json.ashx',
+                fileManagerJson: '/App_Start/file_manager_json.ashx',
+                allowFileManager: true,
+                pasteType:1,
+                afterChange: function () {
+                    this.sync();
+                }, afterBlur: function () {
+                    this.sync();
+                }, afterCreate: function () {
+                    var editerDoc = this.edit.doc;//得到编辑器的文档对象
+                    $(editerDoc).bind('paste', null, function (e) {
+                        /*获得操作系统剪切板里的项目，e即kindeditor,
+                         *kindeditor创建了originalEvent(源事件)对象，
+                         *并指向了浏览器的事件对象，而chrome浏览器
+                         *需要通过clipboardData(剪贴板数据)对象的items
+                         *获得复制的图片数据。
+                         */
+                        var ele = e.originalEvent.clipboardData.items;
+                        for (var i = 0; i < ele.length; ++i) {
+                            //判断文件类型
+                            if (ele[i].kind == 'file' && ele[i].type.indexOf('image/') !== -1) {
+                                var file = ele[i].getAsFile();//得到二进制数据
+                                //创建表单对象，建立name=value的表单数据。
+                                var formData = new FormData();
+                                formData.append("imgFile", file);//name,value
+
+                                //用jquery Ajax 上传二进制数据
+                                $.ajax({
+                                    url: '/App_Start/upload_json.ashx',//dir=image
+                                    type: 'POST',
+                                    data: formData,
+                                    // 告诉jQuery不要去处理发送的数据
+                                    processData: false,
+                                    // 告诉jQuery不要去设置Content-Type请求头
+                                    contentType: false,
+                                    dataType: "json",
+                                    beforeSend: function () {
+                                        //console.log("正在进行，请稍候");
+                                    },
+                                    success: function (responseStr) {
+                                        //上传完之后，生成图片标签回显图片，假定服务器返回url。
+                                        if (responseStr.error == 1) {
+                                            alert(responseStr.message)
+                                        }
+                                        else {
+                                            var src = responseStr.url;
+                                            var imgTag = "<img src='" + src + "' border='0'/>";
+                                            console.log(editor.html());
+                                            //console.info(imgTag);
+                                            //kindeditor提供了一个在焦点位置插入HTML的函数，调用此函数即可。
+                                            editor.insertHtml(imgTag);
+                                        }
+                                    },
+                                    error: function (responseStr) {
+                                        console.log("error");
+                                    }
+                                });
+                            }
+                        }
+                    })
+                }
+            });
+            //无法选中
+            $("#mydatagrid").datagrid({
+                onClickRow: function (index, row) {
+                    $(this).datagrid('unselectRow', index);
+                }
+            });
+            //收藏相关
+            $.ajax({
+                url: "/Home/IsStar",
+                type: "POST",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    //收藏了
+                    if (result == "true") {
+                        $("#star").attr("style", "color:gray")
+                        $("#star").linkbutton('disable')
+                    }
+                    //没收藏
+                    else if (result == "false") {
+                        $("#unstar").attr("style", "color:gray")
+                        $("#unstar").linkbutton('disable')
+                    }
+                }
+            })
+        })
+
+        //html操作
+        var HtmlUtil = {
+            // 1.用浏览器内部转换器实现html编码
+            htmlEncode: function (html) {
+                // 创建一个元素容器
+                var tempDiv = document.createElement('div');
+                // 把需要编码的字符串赋值给该元素的innerText(ie支持)或者textContent(火狐、谷歌等)
+                (tempDiv.textContent != undefined) ? (tempDiv.textContent = html) : (tempDiv.innerText = html);
+                var output = tempDiv.innerHTML;
+                tempDiv = null;
+                return output;
+            },
+
+            // 2.用浏览器内部转换器实现html解码
+            htmlDecode: function (text) {
+                // 创建一个元素容器
+                var tempDiv = document.createElement('div');
+                // 把解码字符串赋值给元素innerHTML
+                tempDiv.innerHTML = text;
+                // 最后返回这个元素的innerText(ie支持)或者textContent(火狐、谷歌等支持)
+                var output = tempDiv.innerText || tempDiv.textContent;
+                tempDiv = null;
+                return output;
+            }
+        }
+
+        //详情formatter
+        function detail(val, row, index) {
+            //当前页数
+            var currPageNumber = $("#mydatagrid").datagrid("getPager").data("pagination").options.pageNumber;
+            //当前页面大小
+            var currPageSize = $("#mydatagrid").datagrid("getPager").data("pagination").options.pageSize;
+            //楼层数
+            var floor = (currPageNumber - 1) * currPageSize + index + 1;
+            var ranks = ["无头衔", "坚韧黑铁", "英勇黄铜", "不屈白银", "荣耀黄金", "华贵铂金", "璀璨钻石", "超凡大师", "傲世宗师", "最强王者", "无上至尊"]
+            var rank=ranks[row.Rank]
+            //返回值
+            var returnvalue = "";
+            //楼主
+            if (floor == 1) {
+                returnvalue += "<div style='border:solid;width:98.5%;background-color:#C4E1FF'>";
+                returnvalue += "<p style='text-align:center'>"
+                returnvalue += "<label style='font-weight:bold;font-size:large'>主题：" + row.Title + "</label>"
+                returnvalue += "</p>"
+                returnvalue += "<img src='/Heads/" + row.Head + "' style='height:40px;float:left;border:groove;'/>";
+                returnvalue += "<label style='font-weight:bold'>1楼[楼主：" + row.NickName + "(等级：" + row.Lv + ")][身份：" + (row.Identity == 0 ? "超管" : (row.Identity == 1 ? "管理" : "用户")) + "]"
+                returnvalue += "[头衔：" + rank + "]</label>"
+                returnvalue += "<img style='height:15px;border:groove;' src='/Attached/default/title/" + row.Rank + ".png'/>"
+                returnvalue += "[<a href='javascript:void(0)' onclick='openuserinfo()' name='" + row.UserName + "'>查看用户身份信息</a>]<br />"
+                returnvalue += "<label style='font-weight:bold'>发帖时间：" + row.Time + "</label><br />"
+                returnvalue += "<div style='padding:5px 5px 5px 5px;'>"
+                returnvalue += row.Content
+                returnvalue += "</div>"
+                returnvalue += "</div>"
+            }
+            //其他楼层
+            else {
+                returnvalue += "<div style='border:solid;width:98.5%'>";
+                returnvalue += "<img src='/Heads/" + row.Head + "' style='height:40px;float:left;border:groove;'/>";
+                returnvalue += "<label style='font-weight:bold'>" + floor + "楼[用户：" + row.NickName + "(等级：" + row.Lv + ")][身份：" + (row.Identity == 0 ? "超管" : (row.Identity == 1 ? "管理" : "用户")) + "]"
+                returnvalue += "[头衔：" + rank + "]</label>"
+                returnvalue += "<img style='height:15px;border:groove;' src='/Attached/default/title/" + row.Rank + ".png'/>"
+                returnvalue += "[<a href='javascript:void(0)' onclick='openuserinfo()' name='" + row.UserName + "'>查看用户身份信息</a>]<br />"
+                returnvalue += "<label style='font-weight:bold'>回帖时间：" + row.Time + "</label><br />"
+                returnvalue += "<div style='padding:5px 5px 5px 5px;'>"
+                returnvalue += row.Content
+                returnvalue += "</div>"
+                returnvalue += "</div>";
+            }
+            return returnvalue;
+        }
+
+        //打开用户信息
+        function openuserinfo(event) {
+            $("#userinfoframe").attr("src", "/Home/PersonalInfoWithoutMail/0/?username=" + window.event.target.name)
+            $('#userdetail').dialog('open')
+        }
+
+        //打开回帖
+        function openreplypost() {
+            $('#replypost').dialog('open')
+        }
+
+        //具体回帖
+        function replypost() {
+            var content = $("#SendReply").val();
+            var postid = $("#postid").val();
+            if (content == "") {
+                $.messager.alert('错误', '内容不得为空');
+                return false;
+            }
+            $.ajax({
+                url: "/Home/AddReply",
+                type: "Post",
+                data: {
+                    "postid": postid,
+                    "content": content
+                },
+                success: function (result) {
+                    KindEditor.instances[0].html("")
+                    $.messager.show({
+                        title: '回帖结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    $("#mydatagrid").datagrid("reload", {
+                        "postid": $("#postid").val()
+                    });
+                }
+            })
+        }
+
+        //打赏金币
+        function givegold() {
+            $.ajax({
+                url: "/Home/HasCoins",
+                type: "POST",
+                success: function (result) {
+                    $("#hascoins").html(result)//写入金币数
+                    $('#givegold').dialog('open')
+                }
+            })
+        }
+
+        //具体打赏
+        function dogivegold() {
+            var givecoins = Number($('#givecoins').combobox('getValue'))
+            var hascoins = Number($("#hascoins").html())
+            if (givecoins > hascoins) {
+                $.messager.alert('金额不足', '打赏请量力而行哦！');
+                return false;
+            }
+            else {
+                $.ajax({
+                    url: "/Home/GiveCoins",
+                    type: "POST",
+                    data: {
+                        "postid": $("#postid").val(),
+                        "givecoins": givecoins
+                    },
+                    success: function (result) {
+                        $.messager.show({
+                            title: '打赏结果',
+                            msg: result,
+                            timeout: 5000,
+                            showType: 'slide'
+                        });
+                        //个人信息刷新
+                        var jq = top.jQuery
+                        jq("#myframe").attr('src', jq('#myframe').attr('src'))
+                        //金币刷新
+                        $.ajax({
+                            url: "/Home/HasCoins",
+                            type: "POST",
+                            success: function (result) {
+                                $("#hascoins").html(result)//更新金币数
+                            }
+                        })
+
+                    }
+                })
+            }
+        }
+
+        //点赞
+        var islike = false;
+        function dolike() {
+            //没点赞
+            if (islike == false) {
+                islike = true
+                $("#like").html("[已点赞]")
+                $.ajax({
+                    url: "/Home/DoLike",
+                    type: "POST",
+                    data: {
+                        "postid": $("#postid").val()
+                    },
+                    success: function (result) {
+                        $.messager.show({
+                            title: '结果',
+                            msg: result + '可以点击收藏连接加入收藏夹哦！'
+                        })
+                    }
+                })
+            }
+            else {
+                $.messager.alert('已经点赞过了', '不能重复点赞');
+            }
+        }
+
+        //收藏
+        function dostar() {
+            $.ajax({
+                url: "/Home/DoStar",
+                type: "POST",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.alert({
+                        title: '结果',
+                        msg: result
+                    })
+                    //收藏相关（必须嵌套否则出错）
+                    $.ajax({
+                        url: "/Home/IsStar",
+                        type: "POST",
+                        data: {
+                            "postid": $("#postid").val()
+                        },
+                        success: function (result) {
+                            //收藏了
+                            if (result == "true") {
+                                $("#star").attr("style", "color:gray")
+                                $("#star").linkbutton('disable')
+                                $("#unstar").attr("style", "color:red")
+                                $("#unstar").linkbutton('enable')
+                            }
+                            //没收藏
+                            else if (result == "false") {
+                                $("#unstar").attr("style", "color:gray")
+                                $("#star").linkbutton('disable')
+                                $("#star").attr("style", "color:red")
+                                $("#star").linkbutton('enable')
+                            }
+                        }
+                    })
+                }
+            })
+
+        }
+
+        //取消收藏
+        function dounstar() {
+            $.ajax({
+                url: "/Home/DoUnStar",
+                type: "POST",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.alert({
+                        title: '结果',
+                        msg: result
+                    })
+                    //收藏相关（必须嵌套否则出错）
+                    $.ajax({
+                        url: "/Home/IsStar",
+                        type: "POST",
+                        data: {
+                            "postid": $("#postid").val()
+                        },
+                        success: function (result) {
+                            //收藏了
+                            if (result == "true") {
+                                $("#star").attr("style", "color:gray")
+                                $("#star").linkbutton('disable')
+                                $("#unstar").attr("style", "color:red")
+                                $("#unstar").linkbutton('enable')
+                            }
+                            //没收藏
+                            else if (result == "false") {
+                                $("#unstar").attr("style", "color:gray")
+                                $("#unstar").linkbutton('disable')
+                                $("#star").attr("style", "color:red")
+                                $("#star").linkbutton('enable')
+                            }
+                        }
+                    })
+                }
+            })
+        }
+    </script>
+
+    <!--管理员管理代码-->
+    <script type="text/javascript">
+        //显示/隐藏
+        function changestatus() {
+            $.ajax({
+                url: "/Home/ChangeStatus",
+                type: "Post",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    window.location.reload();
+                }
+            })
+        }
+
+        //置顶/取消
+        function changetop(){
+            $.ajax({
+                url: "/Home/ChangeTop",
+                type: "Post",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    window.location.reload();
+                }
+            })
+        }
+
+        //加精/取消
+        function changeelite() {
+            $.ajax({
+                url: "/Home/ChangeElite",
+                type: "Post",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    window.location.reload();
+                }
+            })
+        }
+
+        //锁定/取消
+        function changelock() {
+            $.ajax({
+                url: "/Home/ChangeLock",
+                type: "Post",
+                data: {
+                    "postid": $("#postid").val()
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    window.location.reload();
+                }
+            })
+        }
+    </script>
+</head>
+<body>
+    <input type="hidden" id="postid" name="postid" value="@ViewData["postid"]" />
+    <div id="replypost" class="easyui-dialog" title="回复帖子" data-options="iconCls:'icon-edit',buttons: '#dlg-buttons'"
+         style="width:80%;height:500px;padding:10px;display:block;overflow-x:hidden"
+         modal="true" collapsible="true">
+        <textarea id="SendReply" style="resize:none"></textarea>
+    </div>
+
+    <div id="dlg-buttons" style="text-align:center">
+        <a href="javascript:void(0)" class="easyui-linkbutton" onclick="replypost()" style="width:100%">回复帖子</a>
+    </div>
+
+    <div id="userdetail" class="easyui-dialog" title="查看用户信息" data-options="iconCls:'icon-man'"
+         style="width:50%;height:500px;padding:10px;display:block;overflow-x:hidden;"
+         modal="true" collapsible="true">
+        <iframe id="userinfoframe" style="width:100%;overflow-x:hidden;border:solid;height:425px"></iframe>
+    </div>
+
+    <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid"
+           url='/Home/GetPostDetail'
+           fitColumns=true fit=true
+           singleSelect=true footer="#tab-tools" toolbar="#tab-tools2"
+           pagination=true pageList="[10,20,30,40,50]" pageSize="10">
+        <!--使用fit适配页面，这样可以嵌套进iframe里，并且有内部滚动条，fitcolumns则是页面放宽-->
+        <thead>
+            <tr>
+                <th data-options="field:'None',width:100" formatter="detail">
+                    @(ViewData["istop"].ToString() == "1" ? "[置顶]" : "")
+                    @((ViewData["elite"].ToString() == "True") ? "[精华]" : "")
+                    @((ViewData["isshown"].ToString() == "True") ? "" : "[隐藏]")
+                    @((ViewData["locked"].ToString() == "True") ? "[锁定]" : "")
+                    @((ViewData["elite"].ToString() == "False" && ViewData["locked"].ToString() == "False" && ViewData["isshown"].ToString() == "True" && ViewData["istop"].ToString() != "1") ? "[普通]" : "")
+                    @{string type = ViewData["type"].ToString();
+                        if (type == "0")
+                        {
+                            @("[无分类]")
+                        }
+                        else if (type == "1")
+                        {
+                            @("[版务]")
+                        }
+                        else if (type == "2")
+                        {
+                            @("[二次元]")
+                        }
+                        else if (type == "3")
+                        {
+                            @("[游戏]")
+                        }
+                        else if (type == "4")
+                        {
+                            @("[小说]")
+                        }
+                        else if (type == "5")
+                        {
+                            @("[技术]")
+                        }
+                        else if (type == "6")
+                        {
+                            @("[杂谈]")
+                        }
+                    }
+                    [浏览次数:@ViewData["accesstime"].ToString()]
+                    [回复次数:@ViewData["replys"].ToString()]
+                    [点赞次数:@ViewData["likes"].ToString()]
+                </th>
+            </tr>
+        </thead>
+    </table>
+
+    <div id="tab-tools2" style="text-align:center">
+        <a class="easyui-linkbutton" id='like' href='javascript:void(0)' onclick='dolike()' style='color:red'>[点赞]</a>
+        @if (Session["userid"] != null)
+        {
+            <a class="easyui-linkbutton" id='star' href='javascript:void(0)' onclick='dostar()' style='color:red'>[收藏]</a>
+            <a class="easyui-linkbutton" id='unstar' href='javascript:void(0)' onclick='dounstar()' style='color:red'>[取消收藏]</a>
+            <a class="easyui-linkbutton" href='javascript:void(0)' onclick='givegold()' style='color:red' data-options="iconCls:'icon-add'">[打赏金币]</a>
+        }
+        @if (Session["identity"] != null && (Session["identity"].ToString() == "0" || Session["identity"].ToString() == "1"))
+        {
+            <a class="easyui-linkbutton" href='javascript:void(0)' onclick='changestatus()' style='color:red'>[@(ViewData["isshown"].ToString()=="False"?"取消隐藏":"隐藏")]</a>
+            <a class="easyui-linkbutton" href='javascript:void(0)' onclick='changetop()' style='color:red'>[@(ViewData["istop"].ToString() == "1" ? "取消置顶" : "置顶")]</a>
+            <a class="easyui-linkbutton" href='javascript:void(0)' onclick='changeelite()' style='color:red'>[@(ViewData["elite"].ToString() == "True" ? "取消加精" : "加精")]</a>
+            <a class="easyui-linkbutton" href='javascript:void(0)' onclick='changelock()' style='color:red'>[@(ViewData["locked"].ToString() == "True" ? "取消锁定" : "锁定")]</a>
+        }
+    </div>
+
+    <div id="tab-tools" style="text-align:center">
+        @if (Session["userid"] != null)
+        {
+            //有发帖权限
+            if (Session["access"].ToString() == "0" || Session["access"].ToString() == "1")
+            {
+                //锁定的帖子只有管理员和超级管理员能够发帖
+                if (ViewData["locked"].ToString() == "True" && (Session["identity"].ToString() != "0" && Session["identity"].ToString() != "1"))
+                {
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-no'">该帖已锁定，仅管理员/超级管理员可回复</a>
+                }
+                //正常帖子
+                else
+                {
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-edit'" onclick="openreplypost()" style="width:100%">回复帖子</a>
+                }
+            }
+            //无发帖权限
+            else
+            {
+                <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-no'">无发帖权限，请联系超级管理员解锁</a>
+            }
+        }
+        //没登录
+        else
+        {
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-no'" onclick="top.location.href = '/Home/Login'">还没有登录，点击这里登录后回帖</a>
+        }
+    </div>
+
+    <div id="givegold" class="easyui-dialog" title="打赏金币" data-options="iconCls:'icon-filter'"
+         style="width:30%;height:175px;padding:10px;display:block;overflow-x:hidden;" modal="true">
+        <p>
+            <label>已有金币：</label>
+            <label id="hascoins"></label>
+        </p>
+        <p>
+            <label>打赏金币：</label>
+            <select id="givecoins" class="easyui-combobox" style="width:100px;" editable="false">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </p>
+        <button type="button" style="width:100%;color:red" onclick="dogivegold()">打赏</button>
+    </div>
+</body>
+</html>

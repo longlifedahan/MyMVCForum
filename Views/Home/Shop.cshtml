@@ -1,0 +1,123 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>商店</title>
+    <script src="~/Scripts/jquery-3.3.1.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            $.ajax({
+                url: "/Home/GetNextBuy",
+                type: "POST",
+                success: function (result) {
+                    $("#bt" + result).removeAttr("disabled")
+                    $("#bt" + result).click(buy)
+                }
+            })
+        })
+
+        function buy() {
+            $.ajax({
+                url: "/Home/BuyRank",
+                type: "POST",
+                success: function (result) {
+                    alert(result)
+                    window.location.reload();//刷新本窗体
+                    top.flushinfo();//刷新个人信息
+                }
+            })
+        }
+    </script>
+</head>
+<body style="background-image:url('/Attached/background/background_shop.png')">
+    <div style="text-align:center">
+        <div style="display:inline-block;width:75%">
+            <table border="1" style="width:100%;font-weight:bolder">
+                <tr>
+                    <th width="10%">序号</th>
+                    <th width="20%">头衔</th>
+                    <th width="30%">标识</th>
+                    <th width="20%">价格</th>
+                    <th width="10%">购买</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>坚韧黑铁</td>
+                    <td><img src="~/Attached/default/title/1.png" height="30"/></td>
+                    <td>0</td>
+                    <td><button id="bt1" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>英勇黄铜</td>
+                    <td><img src="~/Attached/default/title/2.png" height="35" /></td>
+                    <td>10</td>
+                    <td><button id="bt2" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>不屈白银</td>
+                    <td><img src="~/Attached/default/title/3.png" height="40" /></td>
+                    <td>30</td>
+                    <td><button id="bt3" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>荣耀黄金</td>
+                    <td><img src="~/Attached/default/title/4.png" height="45" /></td>
+                    <td>60</td>
+                    <td><button id="bt4" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>华贵铂金</td>
+                    <td><img src="~/Attached/default/title/5.png" height="50" /></td>
+                    <td>100</td>
+                    <td><button id="bt5" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>璀璨钻石</td>
+                    <td><img src="~/Attached/default/title/6.png" height="55" /></td>
+                    <td>200</td>
+                    <td><button id="bt6" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>超凡大师</td>
+                    <td><img src="~/Attached/default/title/7.png" height="60" /></td>
+                    <td>400</td>
+                    <td><button id="bt7" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>傲世宗师</td>
+                    <td><img src="~/Attached/default/title/8.png" height="65" /></td>
+                    <td>700</td>
+                    <td><button id="bt8" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>最强王者</td>
+                    <td><img src="~/Attached/default/title/9.png" height="70" /></td>
+                    <td>1000</td>
+                    <td><button id="bt9" disabled>购买</button></td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>无上至尊</td>
+                    <td><img src="~/Attached/default/title/10.png" height="75" /></td>
+                    <td>2233</td>
+                    <td><button id="bt10" disabled>购买</button></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

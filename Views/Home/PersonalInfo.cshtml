@@ -1,0 +1,94 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>个人信息</title>
+    <style type="text/css">
+        img {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+        }
+
+        embed {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+            max-height: 400px;
+        }
+
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        div {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        span {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">昵称：</label>@ViewData["nickname"]
+        [用户名: <span style="word-wrap:break-word;text-decoration:underline;color:blue">@ViewData["username"]</span> ]
+        @if (ViewData["username"].ToString() == "未登录用户"&& @ViewData["identity"].ToString()=="未登录用户")
+        {
+              <span>[<a href="/Home/Login" target="_top" style="color:blue">点我登录</a>]</span>
+        }
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">身份：</label>@ViewData["identity"]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">头衔：</label><img style="height:20px;border:groove" src="/Attached/default/title/@(@ViewData["rank"].ToString()).png" />
+        [@(new List<string> {"无头衔","坚韧黑铁","英勇黄铜","不屈白银","荣耀黄金","华贵铂金","璀璨钻石","超凡大师","傲世宗师","最强王者","无上至尊"}[int.Parse(@ViewData["rank"].ToString())])]
+        [@ViewData["rank"]]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">权限：</label>@ViewData["access"]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">等级：</label>@ViewData["lv"] [@ViewData["exp"]/@(int.Parse(ViewData["lv"].ToString()) * 10)]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">金币：</label>@ViewData["gold"]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <span style="width:45%;display:inline-block">
+            <label style="font-weight:bold">回帖：</label>@ViewData["replys"]
+        </span>
+        <span style="width:45%;display:inline-block">
+            <label style="font-weight:bold">发帖：</label>@ViewData["posts"]
+        </span>
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">头像：</label><img src="~/Heads/@ViewData["head"]" style="max-width:50%;max-height:100px;border:groove;" />
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">自我描述：</label>
+        <textarea style="height:100px;width:100%;resize: none;text-align:left" readonly>@ViewData["disc"].ToString() </textarea>
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">注册时间：</label>@ViewData["registertime"]
+    </p>
+    <p style="font-size:medium;padding:0;margin:0">
+        <label style="font-weight:bold">邮箱：</label><span style="word-wrap:break-word;">@ViewData["mail"]</span>
+    </p>
+</body>
+</html>
