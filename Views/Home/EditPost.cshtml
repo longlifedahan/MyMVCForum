@@ -1,0 +1,163 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>编辑帖子</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <!--kinddeitor-->
+    <link href="~/kindeditor/themes/default/default.css" rel="stylesheet" />
+    <link href="~/kindeditor/plugins/code/prettify.css" rel="stylesheet" />
+    <script src="~/kindeditor/kindeditor-all.js"></script>
+    <script src="~/kindeditor/lang/zh-CN.js"></script>
+    <script src="~/kindeditor/plugins/code/prettify.js"></script>
+    <style type="text/css">
+        img {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+        }
+    </style>
+    <script type="text/javascript">
+        $(function () {
+            //KindEditor初始化
+            var editor = KindEditor.create("#SendPost", {
+                resizeType: 0, width: "100%", height: "470px",
+                cssPath: '/kindeditor/plugins/code/prettify.css',
+                uploadJson: '/App_Start/upload_json.ashx',
+                fileManagerJson: '/App_Start/file_manager_json.ashx',
+                allowFileManager: true,
+                pasteType: 1,
+                afterChange: function () {
+                    this.sync();
+                }, afterBlur: function () {
+                    this.sync();
+                }, afterCreate: function () {
+                    var editerDoc = this.edit.doc;//得到编辑器的文档对象
+                    $(editerDoc).bind('paste', null, function (e) {
+                        /*获得操作系统剪切板里的项目，e即kindeditor,
+                         *kindeditor创建了originalEvent(源事件)对象，
+                         *并指向了浏览器的事件对象，而chrome浏览器
+                         *需要通过clipboardData(剪贴板数据)对象的items
+                         *获得复制的图片数据。
+                         */
+                        var ele = e.originalEvent.clipboardData.items;
+                        for (var i = 0; i < ele.length; ++i) {
+                            //判断文件类型
+                            if (ele[i].kind == 'file' && ele[i].type.indexOf('image/') !== -1) {
+                                var file = ele[i].getAsFile();//得到二进制数据
+                                //创建表单对象，建立name=value的表单数据。
+                                var formData = new FormData();
+                                formData.append("imgFile", file);//name,value
+
+                                //用jquery Ajax 上传二进制数据
+                                $.ajax({
+                                    url: '/App_Start/upload_json.ashx',//dir=image
+                                    type: 'POST',
+                                    data: formData,
+                                    // 告诉jQuery不要去处理发送的数据
+                                    processData: false,
+                                    // 告诉jQuery不要去设置Content-Type请求头
+                                    contentType: false,
+                                    dataType: "json",
+                                    beforeSend: function () {
+                                        //console.log("正在进行，请稍候");
+                                    },
+                                    success: function (responseStr) {
+                                        //上传完之后，生成图片标签回显图片，假定服务器返回url。
+                                        if (responseStr.error == 1) {
+                                            alert(responseStr.message)
+                                        }
+                                        else {
+                                            var src = responseStr.url;
+                                            var imgTag = "<img src='" + src + "' border='0'/>";
+                                            console.log(editor.html());
+                                            //console.info(imgTag);
+                                            //kindeditor提供了一个在焦点位置插入HTML的函数，调用此函数即可。
+                                            editor.insertHtml(imgTag);
+                                        } 
+                                    },
+                                    error: function (responseStr) {
+                                        console.log("error");
+                                    }
+                                });
+                            }
+                        }
+                    })
+                }
+            });
+            //默认选中
+            $("#posttype2").combobox('select','@ViewData["type"]')
+        });
+
+        function doedit() {
+            var title = $("#title").val();
+            var content = $("#SendPost").val();
+            var postid = $("#postid").val();
+            if (title == "") {
+                $.messager.alert('错误', '标题不得为空');
+                return false;
+            }
+            if (content == "") {
+                $.messager.alert('错误', '内容不得为空');
+                return false;
+            }
+            if (title.length > 50) {
+                $.messager.alert('错误', '标题长度应小于50');
+                return false;
+            }
+            $("#doeditpost").attr("disabled", true)
+            $.ajax({
+                url: "/Home/DoEditPost",
+                type: "Post",
+                data: {
+                    "title": title,
+                    "content": content,
+                    "postid": postid,
+                    "type": $("#posttype2").combobox('getValue')
+                },
+                success: function (result) {
+                    $("#doeditpost").attr("disabled", false)
+                    var jq = top.jQuery;//获得最父亲的jquery操作句柄
+                    jq('#mydatagrid').datagrid('reload', {});
+                    alert(result)
+                }
+            })
+        }
+    </script>
+</head>
+<body>
+    <input type="hidden" id="postid" name="postid" value="@ViewData["postid"]" />
+    <p style="display:flex; flex-direction: row;">
+        <label style="font-size:large;width:10%">帖子标题</label>
+        <input id="title" style="font-size:large;width:80%" maxlength="50" value="@ViewData["title"]" />
+        <label style="font-size:large;width:10%">帖子类型</label>
+        <select id="posttype2" class="easyui-combobox" name="state" style="width:10%;height:30px" editable="false">
+            <option value="0">无</option>
+            @if (Session["userid"] != null && (Session["identity"].ToString() == "0" || Session["identity"].ToString() == "1"))
+            {
+                <option value="1">版务</option>
+            }
+            <option value="2">二次元</option>
+            <option value="3">游戏</option>
+            <option value="4">小说</option>
+            <option value="5">技术</option>
+            <option value="6">杂谈</option>
+        </select>
+    </p>
+    <textarea id="SendPost" style="resize:none">@ViewData["content"]</textarea>
+    <p>
+        <button id="doeditpost" style="font-size:large;width:100%;font-weight:bolder" onclick="doedit()">
+            修改帖子
+        </button>
+    </p>
+</body>
+</html>

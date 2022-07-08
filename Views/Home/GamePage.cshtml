@@ -1,0 +1,21 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>游戏列表</title>
+</head>
+<body>
+    <div style="text-align:center"> 
+        <h3>游戏列表</h3>
+        <div style="display:inline-block">
+            @Html.Raw(ViewData["gametable"])
+        </div>
+    </div>
+</body>
+</html>
