@@ -1,0 +1,138 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>直连数据库界面</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <style type="text/css">
+        td {
+            word-wrap: break-word;
+            max-width: 400px;
+        }
+
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        div {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        span {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        a {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+    <script type="text/javascript">
+        var count = 1;
+        function exc(type) {
+            //1:ExecuteNonQuery()
+            //2:ExecuteScalar()
+            //3:SQLiteDataAdapter()
+            $.ajax({
+                url: "/Home/Excuate",
+                type: "POST",
+                data: {
+                    "type": type,
+                    "sql": $("#sql").val()
+                    
+                },
+                success: function (result) {
+                    $("#mytab").tabs('add', {
+                        title: "结果" + count,
+                        content: "执行语句:"+$("#sql").val()+"<br/>"+result,
+                        closable: true,
+                        iconCls: 'icon-search'
+                    });
+                    count++
+                }
+            })
+        }
+
+        $(function () {
+            $.ajax({
+                url: "/Home/Excuate",
+                type: "POST",
+                data: {
+                    "type": 3,
+                    "sql": "SELECT * from sqlite_master where type='table'"
+                },
+                success: function (result) {
+                    $("#mytab").tabs('add', {
+                        title: "所有数据库表",
+                        content: "执行语句:" + $("#sql").val() + "<br/>" + result,
+                        closable: false,
+                        iconCls: 'icon-search'
+                    });
+                    count++
+                }
+            })
+        })
+    </script>
+</head>
+<body class="easyui-layout">
+    @if(Session["userid"]==null||Session["userid"].ToString()!="root")
+    {
+        Response.Redirect("/Home/Index");
+    }
+    <div data-options="region:'west',split:true,title:'输入指令',collapsible:false" style="width:25%;padding:10px;">
+        <textarea id="sql" style="width:98%;resize:none;height:35%">请输入sql语句</textarea>
+        <button id="exc1" style="width:99%;height:10%" onclick="exc(1)">ExecuteNonQuery()</button>
+        <button id="exc1" style="width:99%;height:10%" onclick="exc(2)">ExecuteScalar()</button>
+        <button id="exc1" style="width:99%;height:10%" onclick="exc(3)">SQLiteDataAdapter()</button>
+        <label style="font-size:medium;font-weight:bold"> 常用sql语句</label><br />
+        <ul>
+            <li>
+                SELECT * from sqlite_master where type='table'
+            </li>
+            <li>
+                select * from [table] where [cond] order by [typs] asc/desc limit [skip] offset [take];
+            </li>
+            <li>
+                insert into [table] values(value1,'value2'...valueN);
+            </li>
+            <li>
+                update [table] set column1=value1, column2='value2' ... columnN = valueN where [cond]
+            </li>
+            <li>
+                delete from [table] where [cond];
+            </li>
+            <li>
+                ...
+            </li>
+            <li>
+                more in:<a href="https://www.runoob.com/sqlite/sqlite-tutorial.html" target="_blank">https://www.runoob.com/sqlite/sqlite-tutorial.html</a>
+            </li>
+        </ul>
+    </div>
+    <div data-options="region:'center',title:'主面板'">
+        <div class="easyui-tabs" id="mytab" style="width:auto;height:auto;" fit="true">
+        </div>
+    </div>
+</body>
+</html>

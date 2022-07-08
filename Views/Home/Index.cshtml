@@ -1,0 +1,1416 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>论坛主页</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <!--kinddeitor-->
+    <link href="~/kindeditor/themes/default/default.css" rel="stylesheet" />
+    <link href="~/kindeditor/plugins/code/prettify.css" rel="stylesheet" />
+    <script src="~/kindeditor/kindeditor-all.js"></script>
+    <script src="~/kindeditor/lang/zh-CN.js"></script>
+    <script src="~/kindeditor/plugins/code/prettify.js"></script>
+    <!--css-->
+    <style type="text/css">
+        img {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+        }
+
+        embed {
+            max-width: 99%;
+            padding: 1px 1px 1px 1px;
+            max-height: 400px;
+        }
+
+        /*文字自动换行*/
+        p {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        div {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        span {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+
+        /*文字自动换行*/
+        a {
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word;
+        }
+    </style>
+
+    <!--初始化-->
+    <script type="text/javascript">
+        //一大堆
+        $(function () {
+            //KindEditor初始化
+            var editor = KindEditor.create("#SendPost", {
+                resizeType: 0, width: "99%", height: "500px",
+                cssPath: '/kindeditor/plugins/code/prettify.css',
+                uploadJson: '/App_Start/upload_json.ashx',
+                fileManagerJson: '/App_Start/file_manager_json.ashx',
+                allowFileManager: true,
+                pasteType: 1,
+                afterChange: function () {
+                    this.sync();
+                }, afterBlur: function () {
+                    this.sync();
+                }, afterCreate: function () {
+                    var editerDoc = this.edit.doc;//得到编辑器的文档对象
+                    $(editerDoc).bind('paste', null, function (e) {
+                        /*获得操作系统剪切板里的项目，e即kindeditor,
+                         *kindeditor创建了originalEvent(源事件)对象，
+                         *并指向了浏览器的事件对象，而chrome浏览器
+                         *需要通过clipboardData(剪贴板数据)对象的items
+                         *获得复制的图片数据。
+                         */
+                        var ele = e.originalEvent.clipboardData.items;
+                        for (var i = 0; i < ele.length; ++i) {
+                            //判断文件类型
+                            if (ele[i].kind == 'file' && ele[i].type.indexOf('image/') !== -1) {
+                                var file = ele[i].getAsFile();//得到二进制数据
+                                //创建表单对象，建立name=value的表单数据。
+                                var formData = new FormData();
+                                formData.append("imgFile", file);//name,value
+
+                                //用jquery Ajax 上传二进制数据
+                                $.ajax({
+                                    url: '/App_Start/upload_json.ashx',//dir=image
+                                    type: 'POST',
+                                    data: formData,
+                                    // 告诉jQuery不要去处理发送的数据
+                                    processData: false,
+                                    // 告诉jQuery不要去设置Content-Type请求头
+                                    contentType: false,
+                                    dataType: "json",
+                                    beforeSend: function () {
+                                        //console.log("正在进行，请稍候");
+                                    },
+                                    success: function (responseStr) {
+                                        //上传完之后，生成图片标签回显图片，假定服务器返回url。
+                                        if (responseStr.error == 1) {
+                                            alert(responseStr.message)
+                                        }
+                                        else {
+                                            var src = responseStr.url;
+                                            var imgTag = "<img src='" + src + "' border='0'/>";
+                                            console.log(editor.html());
+                                            //console.info(imgTag);
+                                            //kindeditor提供了一个在焦点位置插入HTML的函数，调用此函数即可。
+                                            editor.insertHtml(imgTag);
+                                        }
+                                    },
+                                    error: function (responseStr) {
+                                        console.log("error");
+                                    }
+                                });
+                            }
+                        }
+                    })
+                }
+            });
+            //关闭回复帖子
+            $(function () {
+                $('#postpreview').dialog('close')
+            })
+            //datagrid关闭事件(彻底关闭，清空html，而非隐藏)
+            $("#postpreview").dialog({
+                onClose: function () {
+                    // 想要执行的内容;
+                    $('#postpreview').html("")
+                }
+            });
+            //关闭找回密码窗口
+            $('#findpass').dialog('close')
+            //是否签到
+        });
+
+        //签到
+        $(function () {
+            $.ajax({
+                url: "/Home/CheckHasSigned",
+                type: "POST",
+                success: function (result) {
+                    if (result == "true") {
+                        $("#signbutton").linkbutton({ text: '已签到' });
+                        $("#signbutton").linkbutton('disable')
+                    }
+                }
+            });
+        })
+
+        //iframe自适应高度
+        function setIframeHeight(iframe) {
+            if (iframe) {
+                var iframeWin = iframe.contentWindow || iframe.contentDocument.parentWindow;
+                if (iframeWin.document.body) {
+                    iframe.height = (iframeWin.document.documentElement.scrollHeight || iframeWin.document.body.scrollHeight);
+                }
+            }
+        };
+    </script>
+
+    <!--帖子格式化-->
+    <script type="text/javascript">
+        //帖子详情的formatter
+        function detail(val, row, index) {
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="jump()">查看</a>';
+        }
+
+        //具体跳转
+        function jump(event) {
+            var postid = window.event.target.name
+            var url = "/Home/PostDetail/" + postid
+            var content = '<iframe src="' + url + '"width="100%" height="99%" frameborder="0"></iframe>';
+            $.ajax({
+                url: "/Home/GetPostName",
+                type: "Post",
+                data: {
+                    "id": postid
+                },
+                success: function (result) {
+                    $("#mytab").tabs('add', {
+                        title: result,
+                        content: content,
+                        closable: true,
+                        iconCls: 'icon-search'
+                    });
+                }
+            })
+        }
+
+        //帖子预览的formatter
+        function detail2(val, row, index) {
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="jump2()">预览</a>';
+        }
+
+        //查看预览
+        function jump2(event) {
+            var postid = window.event.target.name
+            $.ajax({
+                url: "/Home/PostPreview",
+                type: "Post",
+                data: {
+                    "postid": postid
+                },
+                success: function (result) {
+                    var out = "无分类"
+                    if (result.Type == 1) {
+                        out = "版务"
+                    } else if (result.Type == 2) {
+                        out = "二次元"
+                    } else if (result.Type == 3) {
+                        out = "游戏"
+                    } else if (result.Type == 4) {
+                        out = "小说"
+                    } else if (result.Type == 5) {
+                        out = "技术"
+                    } else if (result.Type == 6) {
+                        out = "杂谈"
+                    }
+                    var ranks = ["无头衔", "坚韧黑铁", "英勇黄铜", "不屈白银", "荣耀黄金", "华贵铂金", "璀璨钻石", "超凡大师", "傲世宗师", "最强王者", "无上至尊"]
+                    var rank = ranks[result.Rank]
+                    var returnvalue = ""
+                    returnvalue += "<p style='text-align:center'>"
+                    returnvalue += "<label style='font-weight:bold;font-size:large'>主题：" + result.Title + "</label>"
+                    returnvalue += "</p>"
+                    returnvalue += "[" + (result.IsTop == "1" ? "置顶" : "普通") + "][" + out + "][浏览次数:" + result.AccessTime + "][回复次数:" + result.Replys + "][点赞次数:" + result.Likes + "]<br />"
+                    returnvalue += "<img src='/Heads/" + result.Head + "' style='height:32px;float:left'/>";
+                    returnvalue += "<label style='font-weight:bold'>[楼主：" + result.NickName + "(等级:" + result.Lv + ")][身份：" + (result.Identity == 0 ? "超管" : (result.identity == 1 ? "管理" : "用户")) + "]"
+                    returnvalue += "[头衔：" + rank + "]</label>"
+                    returnvalue += "<img style='height:15px;border:groove;' src='/Attached/default/title/" + result.Rank + ".png'/><br />"
+                    returnvalue += "<label style='font-weight:bold'>发帖时间：" + result.Time + "</label><br />"
+                    returnvalue += result.Content
+                    $('#postpreview').html(returnvalue)
+                }
+            })
+            $('#postpreview').dialog('open')
+        }
+
+        //帖子隐藏的formatter
+        function sethide(val, row) {
+            var str = row.Status == true ? "隐藏" : "取消"
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="changestatus()">' + str + '</a>';
+        }
+
+        //显示或隐藏
+        function changestatus(event) {
+            $.ajax({
+                url: "/Home/ChangeStatus",
+                type: "Post",
+                data: {
+                    "postid": window.event.target.name
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    reload();
+                    reload2();
+                }
+            })
+        }
+
+        //修改个人信息
+        function updateinfo() {
+            //$('#mytab').tabs()：获取id=mytab的所有tab控件
+            //tabs('function', title)：根据title参数执行function
+            if ($('#mytab').tabs('exists', "修改个人信息")) {
+                $('#mytab').tabs('select', "修改个人信息");
+                return;
+            }
+            else {
+                var url = "/Home/EditInfo/"
+                var content = '<iframe src="' + url + '"width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "修改个人信息",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-edit'
+                });
+            }
+        }
+
+        //置顶的加粗
+        function titlestyle(index, row) {
+            //置顶
+            if (row.IsTop == 1) {
+                return "color:red;font-weight:bold;"
+            }
+            //精华
+            if (row.Elite == true) {
+                return "color:orange"
+            }
+            //锁定
+            if (row.Locked == true) {
+                return "color:brown"
+            }
+            //隐藏
+            if (row.Status == 0) {
+                return "color:gray"
+            }
+        }
+
+        //格式化帖子标题，精华和锁定（并强制换行）
+        function mytitleformatter(val, row, index) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + (row.IsTop == 1 ? "[顶]" : "") + (row.Elite == true ? "[精]" : "") + val + (row.Locked == true ? "[锁]" : "") + (row.Status == 0 ? "[隐]" : "") + "</p>"
+        }
+
+        //格式化帖子类型
+        function typeformatter(val, row, index) {
+            var out = "无"
+            if (val == 1) {
+                out = "版务"
+            } else if (val == 2) {
+                out = "二次元"
+            } else if (val == 3) {
+                out = "游戏"
+            } else if (val == 4) {
+                out = "小说"
+            } else if (val == 5) {
+                out = "技术"
+            } else if (val == 6) {
+                out = "杂谈"
+            }
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + out + "</p>"
+        }
+
+        //格式化信息（确保强制换行）
+        function nameformatterforpost(val, row, index) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + val + "</p>"
+        }
+
+        //置顶/取消
+        function settop(val, row) {
+            //0为不置顶，1为置顶
+            var str = row.IsTop == 1 ? "取消" : "置顶"
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="changetop()">' + str + '</a>';
+        }
+
+        //具体置顶/取消
+        function changetop(event) {
+            $.ajax({
+                url: "/Home/ChangeTop",
+                type: "Post",
+                data: {
+                    "postid": window.event.target.name
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    reload();
+                    reload2();
+                }
+            })
+        }
+
+        //加精/取消
+        function setelite(val, row) {
+            //0为不置顶，1为置顶
+            var str = row.Elite == 1 ? "取消" : "加精"
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="changeelite()">' + str + '</a>';
+        }
+
+        //具体加精/取消
+        function changeelite(event) {
+            $.ajax({
+                url: "/Home/ChangeElite",
+                type: "Post",
+                data: {
+                    "postid": window.event.target.name
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    reload();
+                    reload2();
+                }
+            })
+        }
+
+        //锁定/取消
+        function setlock(val, row) {
+            //0为不置顶，1为置顶
+            var str = row.Locked == 1 ? "取消" : "锁定"
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="changelock()">' + str + '</a>';
+        }
+
+        //锁定/取消
+        function changelock(event) {
+            $.ajax({
+                url: "/Home/ChangeLock",
+                type: "Post",
+                data: {
+                    "postid": window.event.target.name
+                },
+                success: function (result) {
+                    $.messager.show({
+                        title: '结果',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    reload();
+                    reload2();
+                }
+            })
+        }
+
+        //编辑帖子的formatter
+        function editformatter(val, row) {
+            return '<a href="javascript:void(0)" name=' + row.PostId + ' onclick="doedit()">编辑</a>';
+        }
+
+        //具体编辑
+        function doedit(event) {
+            var jq = top.jQuery;//获得最父亲的jquery操作句柄
+            var postid = window.event.target.name
+            var url = "/Home/EditPost/" + postid
+            var content = '<iframe src="' + url + '"width="100%" height="99%" frameborder="0"></iframe>';
+            $.ajax({
+                url: "/Home/GetPostName",
+                type: "Post",
+                data: {
+                    "id": postid
+                },
+                success: function (result) {
+                    if (jq('#mytab').tabs('exists', "编辑[" + result + "]")) {
+                        jq('#mytab').tabs('select', "编辑[" + result + "]");
+                        return;
+                    }
+                    jq("#mytab").tabs('add', {
+                        title: "编辑[" + result + "]",
+                        content: content,
+                        closable: true,
+                        iconCls: 'icon-ok'
+                    });
+                }
+            })
+        }
+
+        //格式化推荐指数
+        function recstyle(val,row) {
+            if (val>=1000) {
+                return "color:red;font-weight:bold;"
+            }
+            if (val>=500) {
+                return "color:orange;font-weight:bold;"
+            }
+            if (val >= 300) {
+                return "color:yellow;font-weight:bold;"
+            }
+            if (val>=100) {
+                return "color:purple;font-weight:bold;"
+            }
+            if (val>= 50) {
+                return "color:blue;font-weight:bold;"
+            }
+            if (val >= 10) {
+                return "color:green;font-weight:bold;"
+            }
+        }
+    </script>
+
+    <!--人员列表格式化-->
+    <script type="text/javascript">
+        //密码formatter
+        function passwordformatter(val, row) {
+            if (row.Identity == 0)
+                return "******"
+            else
+                return val
+        }
+
+        //头像formatter
+        function headformatter(val, row) {
+            return "<img src='/Heads/" + val + "' style='max-height:50px' />"
+        }
+
+        //经验formatter
+        function expformatter(val, row) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + "[" + val + "/" + row.Lv * 10 + "]" + "</p>"
+        }
+
+        //头衔formatter
+        function rankformatter(val, row) {
+            var ranks = ["无头衔", "坚韧黑铁", "英勇黄铜", "不屈白银", "荣耀黄金", "华贵铂金", "璀璨钻石", "超凡大师", "傲世宗师", "最强王者", "无上至尊"]
+            var rank = ranks[val]
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + rank + "[" + val + "]</p>"
+        }
+
+        //身份formatter
+        function identityformatter(val, row) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + ((val == 0) ? "超管" : (val == 1) ? "管理" : "用户") + "</p>"
+        }
+
+        //身份styler
+        function identitystyle(index, row) {
+            if (row.Identity == 0) {
+                return "color:red;font-weight:bold;"
+            }
+            else if (row.Identity == 1) {
+                return "color:blue;font-weight:bold;"
+            }
+            else {
+                return "font-weight:bold;"
+            }
+        }
+
+        //权限formatter
+        function accessformatter(val, row) {
+            return "<p style='margin:1px 1px 1px 1px;padding:1px 1px 1px 1px;'>" + ((val == 0) ? "正常" : (val == 1) ? "禁发帖" : (val == 2) ? "禁发/回帖" : "禁登录") + "</p>"
+        }
+
+        //权限styler
+        function accessstyle(index, row) {
+            if (row.Access == 0) {
+                return "font-weight:bold;"
+            }
+            else if (row.Access == 1) {
+                return "color:mediumvioletred;font-weight:bold;"
+            }
+            else if (row.Access == 2) {
+                return "color:darkred;font-weight:bold;"
+            }
+            else if (row.Access == 3) {
+                return "color:red;font-weight:bold;"
+            }
+        }
+
+        //用户名变红
+        function redstyle(index, row) {
+            return "color:red;font:bold;"
+        }
+    </script>
+
+    <!--操作帖子-->
+    <script type="text/javascript">
+        //发帖
+        function sendpost() {
+            var title = $("#title").val();
+            var content = $("#SendPost").val();
+            if (title == "") {
+                $.messager.alert('错误', '标题不得为空');
+                return false;
+            }
+            if (content == "") {
+                $.messager.alert('错误', '内容不得为空');
+                return false;
+            }
+            if (title.length > 50) {
+                $.messager.alert('错误', '标题长度应小于50');
+                return false;
+            }
+            $("#dosendpost").attr("disabled", true)
+            $.ajax({
+                url: "/Home/AddPost",
+                type: "Post",
+                data: {
+                    "title": title,
+                    "content": content,
+                    "type": $("#posttype").combobox('getValue')
+                },
+                success: function (result) {
+                    $("#dosendpost").attr("disabled", false)
+                    $("#title").val("");
+                    KindEditor.instances[0].html("")
+                    $.messager.show({
+                        title: '发帖成功',
+                        msg: result,
+                        timeout: 5000,
+                        showType: 'slide'
+                    });
+                    reload();
+                }
+            })
+        }
+
+        //搜索帖子（普通用户）
+        function dosearch(value, name) {
+            //value为搜索值
+            //name为下拉框值
+            //alert(value + ":" + name)
+            $('#mydatagrid').datagrid('load', {//自动返回第一页，并且重新设置url（一直会带参数），不用担心
+                "name": $('#searchinput1').searchbox('getName'),//1为帖子名，2为发帖人
+                "value": $('#searchinput1').searchbox('getValue'),
+                "type": $("#searchtype1").val()
+            });
+        }
+
+        //搜索帖子（管理员）
+        function dosearch2(value, name) {
+            //value为搜索值
+            //name为下拉框值
+            //alert(value + ":" + name)
+            $('#mydatagrid2').datagrid('load', {//自动返回第一页，并且重新设置url（一直会带参数），不用担心
+                "name": name,//1为帖子名，2为发帖人，3为所有显示的帖子，4为所有隐藏的帖子
+                "value": value
+            });
+        }
+
+        //清空排序
+        function clearorder() {
+            //清空排序
+            if ($('#mydatagrid').datagrid('options').sortName) {//不为空，排序了
+                if ($('#mydatagrid').datagrid('options').sortOrder == "asc") {
+                    myclass = $("[class$='datagrid-sort-asc']").attr("class")
+                    myclass = myclass.replace("datagrid-sort-asc", "datagrid-sort")
+                    $("[class$='datagrid-sort-asc']").attr("class", myclass)
+                }
+                else if ($('#mydatagrid').datagrid('options').sortOrder == "desc") {
+                    myclass = $("[class$='datagrid-sort-desc']").attr("class")
+                    myclass = myclass.replace("datagrid-sort-desc", "datagrid-sort")
+                    $("[class$='datagrid-sort-desc']").attr("class", myclass)
+                }
+                $('#mydatagrid').datagrid('options').sortName = ""
+                $('#mydatagrid').datagrid('options').sortOrder = ""
+            }
+            $('#mydatagrid').datagrid('load', {//自动返回第一页，并且重新设置url（一直会带参数），不用担心
+                "name": $('#searchinput1').searchbox('getName'),//1为帖子名，2为发帖人
+                "value": $('#searchinput1').searchbox('getValue'),
+                "type": $("#searchtype1").val()
+            });
+        }
+    </script>
+
+    <!--操作人员-->
+    <script type="text/javascript">
+        //改变权限
+        function changeidentity() {
+            var row = $('#mydatagrid3').datagrid('getSelected');
+            if (row) {
+                var userid = row.UserId;
+                var identity = row.Identity;//0超管，1管理，2普通
+                var newidentity = $("#newidentity").combobox("getValue");//0超管，1管理，2普通
+                //想要修改root
+                if (userid == "root") {
+                    $.messager.alert('错误', '不允许修改root用户的身份！');
+                    return false;
+                }
+                //修改的非root
+                else {
+                    //设置的对象非超管,且设置后的身份非超管，无需身份验证
+                    if (identity != 0 && newidentity != 0) {
+                        $.ajax({
+                            url: "/Home/ChangeIdentity",
+                            type: "Post",
+                            data: {
+                                "userid": userid,
+                                "newidentity": newidentity
+                            },
+                            success: function (result) {
+                                $.messager.show({
+                                    title: '结果',
+                                    msg: result,
+                                    timeout: 5000,
+                                    showType: 'slide'
+                                });
+                                $("#mydatagrid3").datagrid("reload", {});
+                            }
+                        })
+                    }
+                    //设置的对象为超管或设置的身份为超管，需要身份验证
+                    else {
+                        $.ajax({
+                            url: "/Home/GetUserId",
+                            type: "Post",
+                            data: {
+                            },
+                            success: function (result) {
+                                if (result == "root") {//为root可以修改
+                                    $.ajax({
+                                        url: "/Home/ChangeIdentity",
+                                        type: "Post",
+                                        data: {
+                                            "userid": userid,
+                                            "newidentity": newidentity
+                                        },
+                                        success: function (result) {
+                                            $.messager.show({
+                                                title: '结果',
+                                                msg: result,
+                                                timeout: 5000,
+                                                showType: 'slide'
+                                            });
+                                            $("#mydatagrid3").datagrid("reload", {});
+                                        }
+                                    })
+                                }
+                                else {//非root不允许修改
+                                    $.messager.alert('错误', '非root用户不能修改超级管理员身份，也不能授予超级管理员身份！');
+                                    return false;
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+        }
+
+        //改变身份
+        function changeaccess() {
+            var row = $('#mydatagrid3').datagrid('getSelected');
+            if (row) {
+                var userid = row.UserId;
+                var identity = row.Identity;//0超管，1管理，2普通
+                var newaccess = $("#newaccess").combobox("getValue");//0正常，1可回不可发，2不可回不可发，3禁登录
+                //想要修改root
+                if (userid == "root") {
+                    $.messager.alert('错误', '不允许修改root用户的权限！');
+                    return false;
+                }
+                //修改的非root
+                else {
+                    //设置的对象非超管,无需身份验证
+                    if (identity != 0) {
+                        $.ajax({
+                            url: "/Home/ChangeAccess",
+                            type: "Post",
+                            data: {
+                                "userid": userid,
+                                "newaccess": newaccess
+                            },
+                            success: function (result) {
+                                $.messager.show({
+                                    title: '结果',
+                                    msg: result,
+                                    timeout: 5000,
+                                    showType: 'slide'
+                                });
+                                $("#mydatagrid3").datagrid("reload", {});
+                            }
+                        })
+                    }
+                    //设置的对象为超管，需要身份验证（root才可以）
+                    else {
+                        $.ajax({
+                            url: "/Home/GetUserId",
+                            type: "Post",
+                            data: {
+                            },
+                            success: function (result) {
+                                if (result == "root" || result == userid) {//为root可以修改，修改自己也可以
+                                    $.ajax({
+                                        url: "/Home/ChangeAccess",
+                                        type: "Post",
+                                        data: {
+                                            "userid": userid,
+                                            "newaccess": newaccess
+                                        },
+                                        success: function (result) {
+                                            $.messager.show({
+                                                title: '结果',
+                                                msg: result,
+                                                timeout: 5000,
+                                                showType: 'slide'
+                                            });
+                                            $("#mydatagrid3").datagrid("reload", {});
+                                        }
+                                    })
+                                }
+                                else {//非root不允许修改
+                                    $.messager.alert('错误', '非root用户不能修改除自己外的超级管理员权限！');
+                                    return false;
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+        }
+
+        //查看密码
+        function showpassword() {
+            var row = $('#mydatagrid3').datagrid('getSelected');
+            if (row) {
+                $.ajax({
+                    url: "/Home/GetUserId",
+                    type: "Post",
+                    data: {
+                    },
+                    success: function (result) {
+                        if (result == "root")
+                            $.messager.alert('密码', row.Password);
+                        else
+                            $.messager.alert('错误', '非root用户不得查看超级管理员密码');
+                    }
+                });
+            }
+        }
+
+        //按用户名搜索
+        function searchuser(value) {
+            $('#mydatagrid3').datagrid('load', {//自动返回第一页，并且重新设置url（一直会带参数），不用担心
+                "username": value
+            });
+        }
+    </script>
+
+    <!--打开界面、刷新和其他功能-->
+    <script type="text/javascript">
+        //打开我的帖子列表
+        function mypost() {
+            //$('#mytab').tabs()：获取id=mytab的所有tab控件
+            //tabs('function', title)：根据title参数执行function
+            if ($('#mytab').tabs('exists', "我的帖子")) {
+                $('#mytab').tabs('select', "我的帖子");
+                return;
+            }
+            else {
+                var url = "/Home/MyPosts/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "我的帖子",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-man'
+                });
+            }
+        }
+
+        //打开收藏夹
+        function likes() {
+            if ($('#mytab').tabs('exists', "收藏夹")) {
+                $('#mytab').tabs('select', "收藏夹");
+                return;
+            }
+            else {
+                var url = "/Home/Star/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "收藏夹",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-star'
+                });
+            }
+        }
+
+        //刷新个人信息（iframe）
+        function flushinfo() {
+            $('#myframe').attr('src', $('#myframe').attr('src'));
+            //document.getElementById('myframe').contentWindow.location.reload(true);
+        }
+
+        //找回密码界面
+        function openfindpass() {
+            $('#findpass').dialog('open')
+        }
+
+        //刷新datagrid（浏览帖子）
+        function reload() {
+            //清空搜索框
+            $("#searchinput1").searchbox('setValue', '');
+            $("#searchtype1").val("-1")
+            //清空排序状态和箭头
+            var myclass = ""
+            //like datagrid-cell datagrid-sort datagrid-cell-c1-AccessTime datagrid-sort-asc
+            if ($('#mydatagrid').datagrid('options').sortName) {//不为空，排序了
+                if ($('#mydatagrid').datagrid('options').sortOrder == "asc") {
+                    myclass = $("[class$='datagrid-sort-asc']").attr("class")
+                    myclass = myclass.replace("datagrid-sort-asc", "datagrid-sort")
+                    $("[class$='datagrid-sort-asc']").attr("class", myclass)
+                }
+                else if ($('#mydatagrid').datagrid('options').sortOrder == "desc") {
+                    myclass = $("[class$='datagrid-sort-desc']").attr("class")
+                    myclass = myclass.replace("datagrid-sort-desc", "datagrid-sort")
+                    $("[class$='datagrid-sort-desc']").attr("class", myclass)
+                }
+                $('#mydatagrid').datagrid('options').sortName = ""
+                $('#mydatagrid').datagrid('options').sortOrder = ""
+                $('#mydatagrid').datagrid('reload', {});
+            }
+            else {//为空（没排序）
+                $('#mydatagrid').datagrid('reload', {});
+            }
+        }
+
+        //刷新datagrid（管理帖子）
+        function reload2() {
+            //清空搜索框
+            $("#searchinput2").searchbox('setValue', '');
+            $('#mydatagrid2').datagrid('reload', {});
+        }
+
+        //刷新datagrid（人员管理）
+        function reload3() {
+            //清空搜索框
+            $("#searchinput3").searchbox('setValue', '');
+            $('#mydatagrid3').datagrid('reload', {});
+        }
+    </script>
+
+    <!--新功能-->
+    <script type="text/javascript">
+        //具体找回密码
+        function findpass() {
+            var username = $("#findpass_username").val()
+            var mailbox = $("#findpass_mailbox").val()
+            if (username == "" || mailbox == "")
+                alert("输入的用户名和邮箱不得为空")
+            if (!$("#findpassform").form('validate')) {
+                alert("输入的邮箱非法")
+            }
+            else {
+                $.ajax({
+                    url: "/Home/FindPass",
+                    type: "Post",
+                    data: {
+                        "username": username,
+                        "mailbox": mailbox
+                    },
+                    success: function (result) {
+                        alert(result)
+                    }
+                })
+            }
+        }
+
+        //签到
+        function signup() {
+            $.ajax({
+                url: "/Home/SignUp",
+                type: "POST",
+                success: function (result) {
+                    alert(result)
+                    $("#signbutton").linkbutton({ text: '已签到' });
+                    $("#signbutton").linkbutton('disable')
+                }
+            })
+        }
+
+        //商店
+        function shop() {
+            if ($('#mytab').tabs('exists', "商店")) {
+                $('#mytab').tabs('select', "商店");
+                return;
+            }
+            else {
+                var url = "/Home/Shop/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "商店",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-shop'
+                });
+            }
+        }
+
+        //我的回复
+        function myreply() {
+            if ($('#mytab').tabs('exists', "我的回复")) {
+                $('#mytab').tabs('select', "我的回复");
+                return;
+            }
+            else {
+                var url = "/Home/MyReplys/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "我的回复",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-print'
+                });
+            }
+        }
+
+        //排行榜
+        function rank() {
+            if ($('#mytab').tabs('exists', "排行榜")) {
+                $('#mytab').tabs('select', "排行榜");
+                return;
+            }
+            else {
+                var url = "/Home/RankList/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "排行榜",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-rank'
+                });
+            }
+        }
+
+        //游戏
+        function playgame() {
+            if ($('#mytab').tabs('exists', "H5游戏")) {
+                $('#mytab').tabs('select', "H5游戏");
+                return;
+            }
+            else {
+                var url = "/Home/GamePage/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "H5游戏",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-print'
+                });
+            }
+        }
+
+        //数据统计
+        function datacount() {
+            if ($('#mytab').tabs('exists', "数据统计")) {
+                $('#mytab').tabs('select', "数据统计");
+                return;
+            }
+            else {
+                var url = "/Home/Datas/"
+                var content = '<iframe src="' + url + '" width="100%" height="99%" frameborder="0"></iframe>';
+                $("#mytab").tabs('add', {
+                    title: "数据统计",
+                    content: content,
+                    closable: true,
+                    iconCls: 'icon-print'
+                });
+            }
+        }
+    </script>
+
+    <!--工具箱-->
+    <script type="text/javascript">
+        var value = 0//top
+        function rotatePanel() {
+            if (value == 0) {
+                $('#mytab').tabs({ tabPosition: 'right' })
+                value++
+            } else if (value == 1) {
+                $('#mytab').tabs({ tabPosition: 'bottom' })
+                value++
+
+            } else if (value == 2) {
+                $('#mytab').tabs({ tabPosition: 'left' })
+                value++
+
+            } else if (value == 3) {
+                $('#mytab').tabs({ tabPosition: 'top' })
+                value = 0
+            }
+        }
+    </script>
+</head>
+<body class="easyui-layout">
+    <!--顶部-->
+    <div data-options="region:'north',border:false" style="height:60px;background-color:deepskyblue;padding:0px;overflow:hidden">
+        <div style="text-align:center;">
+            <h1 style="color:white;">我的MVC论坛（www.mymvcforum.com）</h1>
+        </div>
+
+        <!--找回密码-->
+        <div id="findpass" class="easyui-dialog" title="找回密码" style="width:400px;height:200px;padding:10px" modal="true">
+            <form id="findpassform">
+                <p>
+                    <span style="width:15%;display:inline-block">用户名：</span>
+                    <input id="findpass_username" class="easyui-textbox" data-options="prompt:'请输入用户名'" style="width:80%;">
+                </p>
+                <p>
+                    <span style="width:15%;display:inline-block">邮箱：</span>
+                    <input id="findpass_mailbox" class="easyui-textbox" data-options="prompt:'请输入邮箱',validType:'email'" style="width:80%;">
+                </p>
+                <p>
+                    <a href="#" class="easyui-linkbutton" data-options="iconCls:'icon-search'" style="width:98%" onclick="findpass()">找回密码</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!--个人信息和功能菜单-->
+    <div data-options="region:'west',split:true,title:'信息/菜单',collapsible:true" style="width:20%;">
+        <div id="myinfo" class="easyui-panel" title="个人信息" style="width:98%;height:auto;"
+             data-options="iconCls:'icon-man',collapsible:true,tools:'#infott'">
+            <iframe id="myframe" style="width:100%;border: medium none;height:200px;overflow:hidden" scrolling="yes" src="/Home/PersonalInfo"></iframe>
+        </div>
+        <div id="infott">
+            <a href="javascript:void(0)" class="icon-reload" onclick="flushinfo()"></a>
+        </div>
+        <div id="tools" class="easyui-panel" title="功能面板" style="width:98%;height:auto;"
+             data-options="iconCls:'icon-help',collapsible:true,tools:'#infott'">
+            @if (Session["userid"] == null)
+            {
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-game'" href="javascript:void(0)" onclick="playgame()">游戏</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-rank'" href="javascript:void(0)" onclick="rank()">排行榜</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    没有登录？
+                    <a href="/Home/Login">立刻登录</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    忘记密码？
+                    <a href="javascript:void(0)" onclick="openfindpass()">点击找回</a>
+                </p>
+            }
+            else
+            {
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-game'" href="javascript:void(0)" onclick="playgame()">游戏</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-man'" href="javascript:void(0)" onclick="mypost()">我的帖子</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-print'" href="javascript:void(0)" onclick="myreply()">我的回复</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-star'" href="javascript:void(0)" onclick="likes()">收藏夹</a>
+                </p>
+                if (Session["userid"].ToString() == "root")
+                {
+                    <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                        <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-chart'" href="/Home/LinkDataBaseDirectly" target="_blank">数据库直连</a>
+                    </p>
+                }
+                if (Session["identity"].ToString() == "0" || Session["identity"].ToString() == "1")
+                {
+                    <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                        <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-data'" href="javascript:void(0)" onclick="datacount()">数据统计</a>
+                    </p>
+                }
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-edit'" href="javascript:void(0)" onclick="updateinfo()">修改个人信息</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a id="signbutton" class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-sign-up'" href="javascript:void(0)" onclick="signup()">签到</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-shop'" href="javascript:void(0)" onclick="shop()">商店（升级头衔）</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-rank'" href="javascript:void(0)" onclick="rank()">排行榜</a>
+                </p>
+                <p style="font-size:medium;text-align:center;border:solid;padding:1px 1px 1px 1px;margin:0">
+                    <a class="easyui-linkbutton" style="width:90%" data-options="plain:true,iconCls:'icon-no'" href="/Home/Logout">退出登录</a>
+                </p>
+            }
+        </div>
+    </div>
+
+    <!--核心功能-->
+    <div data-options="region:'center',title:'主面板'">
+        <div class="easyui-tabs" id="mytab" style="width:auto;height:400px;overflow:hidden" fit="true" data-options="tabPosition:'top',tools:'#tab-tool-fortab'">
+            <!--帖子浏览-->
+            <div title="帖子" data-options="iconCls:'icon-print',closable:false" style="padding:0px;">
+                <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid"
+                       url='/Home/GetPosts'
+                       fitColumns=true fit=true
+                       singleSelect=true
+                       pagination=true pageList="[10,20,30,40,50]" pageSize="20"
+                       toolbar="#tab-tools">
+                    <!--使用fit适配页面，这样可以嵌套进iframe里，并且有内部滚动条，fitcolumns则是页面放宽-->
+                    <thead>
+                        <tr>
+                            <th data-options="field:'Title',width:100,align:'center'" styler="titlestyle" formatter="mytitleformatter">帖子标题</th>
+                            <th data-options="field:'Type',width:25,align:'center'" formatter="typeformatter">分类</th>
+                            <th data-options="field:'NickName',width:50,align:'center'" formatter="nameformatterforpost">发帖者</th>
+                            <th data-options="field:'Time',width:75,align:'center',sortable:true" formatter="nameformatterforpost">发帖时间</th>
+                            <th data-options="field:'Replys',width:25,align:'center',sortable:true" formatter="nameformatterforpost">回复</th>
+                            <th data-options="field:'AccessTime',width:25,align:'center',sortable:true" formatter="nameformatterforpost">浏览</th>
+                            <th data-options="field:'Likes',width:25,align:'center',sortable:true" formatter="nameformatterforpost">点赞</th>
+                            <th data-options="field:'Rec',width:35,align:'center',sortable:true" styler="recstyle" formatter="nameformatterforpost">推荐指数</th>
+                            <th data-options="field:'LastReplyTime',width:75,align:'center',sortable:true" formatter="nameformatterforpost">最后回复时间</th>
+                            <th data-options="field:'LastReplyNickName',width:50,align:'center'" formatter="nameformatterforpost">最后回复者</th>
+                            <th data-options="field:'None',width:25,align:'center'" formatter="detail">详情</th>
+                            <th data-options="field:'None2',width:25,align:'center'" formatter="detail2">预览</th>
+                        </tr>
+                    </thead>
+                </table>
+
+                <!--工具箱-->
+                <div id="tab-tools" style="text-align:center">
+                    <!--按分类搜索-->
+                    分类：
+                    <select id="searchtype1" name="state" style="width:60px" onchange="dosearch()">
+                        <option value="-1">所有</option>
+                        <option value="0">无</option>
+                        <option value="1">版务</option>
+                        <option value="2">二次元</option>
+                        <option value="3">游戏</option>
+                        <option value="4">小说</option>
+                        <option value="5">技术</option>
+                        <option value="6">杂谈</option>
+                    </select>
+                    <!--搜索-->
+                    <input id="searchinput1" class="easyui-searchbox" style="width:300px" data-options="menu:'#mm',searcher:dosearch,prompt:'请输入搜索值'" />
+                    <div id="mm" style="width:200px">
+                        <div data-options="name:'1'">按帖子名搜索</div>
+                        <div data-options="name:'2'">按发帖人搜索</div>
+                    </div>
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-reload'" onclick="reload()">清空搜索</a>
+                    <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-filter'" onclick="clearorder()">清空排序</a>
+                </div>
+                <!--帖子预览-->
+                <div id="postpreview" class="easyui-dialog" title="帖子预览" data-options="iconCls:'icon-search'"
+                     style="width:75%;height:500px;padding:10px;display:block;overflow-x:hidden"
+                     modal="true" collapsible="true">
+                </div>
+            </div>
+
+            @if (Session["userid"] != null && (Session["access"].ToString() == "0"))
+            {
+                //发帖
+                <div title="发帖" data-options="iconCls:'icon-add',closable:false" style="padding:0px;overflow:hidden">
+                    <p style="display:flex; flex-direction: row;">
+                        <label style="font-size:large;width:10%">帖子标题</label>
+                        <input id="title" style="font-size:large;width:80%" maxlength="50" />
+                        <label style="font-size:large;width:10%">帖子类型</label>
+                        <select id="posttype" class="easyui-combobox" name="state" style="width:10%;height:30px" editable="false">
+                            <option value="0">无</option>
+                            @if (Session["userid"] != null && (Session["identity"].ToString() == "0" || Session["identity"].ToString() == "1"))
+                            {
+                                <option value="1">版务</option>
+                            }
+                            <option value="2">二次元</option>
+                            <option value="3">游戏</option>
+                            <option value="4">小说</option>
+                            <option value="5">技术</option>
+                            <option value="6">杂谈</option>
+                        </select>
+                    </p>
+                    <textarea id="SendPost" style="resize:none"></textarea>
+                    <p>
+                        <button id="dosendpost" style="font-size:large;width:100%;font-weight:bolder" onclick="sendpost()">
+                            发帖
+                        </button>
+                    </p>
+                </div>
+            }
+
+            @if (Session["identity"] != null && (Session["identity"].ToString() == "0" || Session["identity"].ToString() == "1"))
+            {
+                //帖子管理
+                <div title="管理帖子" data-options="iconCls:'icon-print',closable:false" style="padding:0px;">
+                    <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid2"
+                           url='/Home/GetAllPosts'
+                           fitColumns=true fit=true
+                           singleSelect=true toolbar="#tab-tools2"
+                           pagination=true pageList="[1,10,20,30,40,50]" pageSize="20">
+                        <!--使用fit适配页面，这样可以嵌套进iframe里，并且有内部滚动条，fitcolumns则是页面放宽-->
+                        <thead>
+                            <tr>
+                                <th data-options="field:'Title',width:100,align:'center'" styler="titlestyle" formatter="mytitleformatter">帖子标题</th>
+                                <th data-options="field:'Type',width:25,align:'center'" formatter="typeformatter">分类</th>
+                                <th data-options="field:'NickName',width:50,align:'center'" formatter="nameformatterforpost">发帖者</th>
+                                <th data-options="field:'UserName',width:50,align:'center'" formatter="nameformatterforpost">用户名</th>
+                                <th data-options="field:'Time',width:50,align:'center'" formatter="nameformatterforpost">发帖时间</th>
+                                <th data-options="field:'Replys',width:25,align:'center'" formatter="nameformatterforpost">回复</th>
+                                <th data-options="field:'AccessTime',width:25,align:'center'" formatter="nameformatterforpost">浏览</th>
+                                <th data-options="field:'Likes',width:25,align:'center'" formatter="nameformatterforpost">点赞</th>
+                                <th data-options="field:'LastReplyTime',width:50,align:'center'" formatter="nameformatterforpost">最后回复时间</th>
+                                <th data-options="field:'LastReplyNickName',width:50,align:'center'" formatter="nameformatterforpost">最后回复者</th>
+                                <th data-options="field:'LastReplyUserName',width:50,align:'center'" formatter="nameformatterforpost">用户名</th>
+                                <th data-options="field:'None1',width:25,align:'center'" formatter="detail">详情</th>
+                                <th data-options="field:'None2',width:25,align:'center'" formatter="detail2">预览</th>
+                                <th data-options="field:'None3',width:25,align:'center'" formatter="sethide">隐藏</th>
+                                <th data-options="field:'None4',width:25,align:'center'" formatter="settop">置顶</th>
+                                <th data-options="field:'None5',width:25,align:'center'" formatter="setelite">加精</th>
+                                <th data-options="field:'None6',width:25,align:'center'" formatter="setlock">锁定</th>
+                                @if (Session["userid"] != null && Session["identity"].ToString() == "0")//超级管理员
+                                {
+                                    <th data-options="field:'None7',width:25,align:'center'" formatter="editformatter">编辑</th>
+                                }
+                                <th data-options="field:'None8',width:10,align:'center'">滚</th>
+                            </tr>
+                        </thead>
+                    </table>
+
+                    <div id="tab-tools2" style="text-align:center">
+                        <input id="searchinput2" class="easyui-searchbox" style="width:300px" data-options="menu:'#mm2',searcher:dosearch2,prompt:'请输入搜索值'" />
+                        <div id="mm2" style="width:200px">
+                            <div data-options="name:'1'">按帖子名搜索</div>
+                            <div data-options="name:'2'">按发帖人搜索</div>
+                            <div data-options="name:'3'">所有锁定的帖子</div>
+                            <div data-options="name:'4'">所有隐藏的帖子</div>
+                            <div data-options="name:'5'">所有精华的帖子</div>
+                        </div>
+                        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-reload'" onclick="reload2()">清空搜索并刷新</a>
+                    </div>
+                </div>
+            }
+
+            @if (Session["identity"] != null && Session["identity"].ToString() == "0")
+            {
+                //人员管理
+                <div title="人员管理" data-options="iconCls:'icon-tip',closable:false" style="padding:0px;">
+                    <table class="easyui-datagrid" style="width:auto;height:auto" id="mydatagrid3"
+                           url='/Home/GetUsers'
+                           fitColumns=true fit=true
+                           singleSelect=true toolbar="#tab-tools3"
+                           pagination=true pageList="[10,20,30,40,50]" pageSize="20">
+                        <!--使用fit适配页面，这样可以嵌套进iframe里，并且有内部滚动条，fitcolumns则是页面放宽-->
+                        <thead>
+                            <tr>
+                                <th data-options="field:'UserName',width:25,align:'center'" formatter="nameformatterforpost" styler="redstyle">用户名</th>
+                                <th data-options="field:'NickName',width:25,align:'center'" formatter="nameformatterforpost">昵称</th>
+                                <th data-options="field:'Password',width:25,align:'center'" formatter="passwordformatter">密码</th>
+                                <th data-options="field:'Head',width:25,align:'center'" formatter="headformatter">用户头像</th>
+                                <th data-options="field:'Rank',width:25,align:'center'" formatter="rankformatter">头衔</th>
+                                <th data-options="field:'Lv',width:10,align:'center'" formatter="nameformatterforpost">等级</th>
+                                <th data-options="field:'Exp',width:15,align:'center'" formatter="expformatter">经验</th>
+                                <th data-options="field:'Identity',width:10,align:'center'" formatter="identityformatter" styler="identitystyle">身份</th>
+                                <th data-options="field:'Access',width:15,align:'center'" formatter="accessformatter" styler="accessstyle">权限</th>
+                                <th data-options="field:'Posts',width:10,align:'center'" formatter="nameformatterforpost">帖子</th>
+                                <th data-options="field:'Replys',width:10,align:'center'" formatter="nameformatterforpost">回复</th>
+                                <th data-options="field:'MailBox',width:35,align:'center'" formatter="nameformatterforpost">邮箱</th>
+                                <th data-options="field:'RegisterTime',width:35,align:'center'" formatter="nameformatterforpost">注册时间</th>
+                                <th data-options="field:'MVCGold',width:15,align:'center'">MVC币</th>
+                            </tr>
+                        </thead>
+                    </table>
+
+                    <div id="tab-tools3" style="text-align:center">
+                        按名称搜索:
+                        <input id="searchinput3" class="easyui-searchbox" data-options="prompt:'请输入用户昵称',searcher:searchuser">
+                        <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-reload'" onclick="reload3()">清空搜索并刷新</a>
+                        修改选中人身份：
+                        <select class="easyui-combobox" name="identity" id="newidentity">
+                            @if (Session["userid"] != null && Session["userid"].ToString() == "root")
+                            {
+                                <option value="0">超级管理员</option>
+                            }
+                            <option value="1">管理员</option>
+                            <option value="2">用户</option>
+                        </select>
+                        <button type="button" onclick="changeidentity()">提交</button>
+                        修改选中人权限：
+                        <select class="easyui-combobox" name="access" id="newaccess">
+                            <option value="0">正常（允许发帖/回复）</option>
+                            <option value="1">允许回帖，禁止发帖</option>
+                            <option value="2">禁止发帖/回帖</option>
+                            <option value="3">禁止登录</option>
+                        </select>
+                        <button type="button" onclick="changeaccess()">提交</button>
+                        @if (Session["userid"] != null && Session["userid"].ToString() == "root")
+                        {
+                            <button type="button" onclick="showpassword()">查看密码</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        <!--工具箱-->
+        <div id="tab-tool-fortab">
+            <a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-undo'" onclick="rotatePanel()"></a>
+        </div>
+    </div>
+
+    <!--美少女看板娘-->
+    <!--
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/live2d-widget@3.0.4/lib/L2Dwidget.min.js?=1557308476616"></script>
+    -->
+    <script src="https://eqcn.ajz.miesnfu.com/wp-content/plugins/wp-3d-pony/live2dw/lib/L2Dwidget.min.js"></script>
+    <script type="text/javascript">
+        var model_arr = [
+            'hibiki',     
+            'miku',      
+            'tsumiki',    
+            'koharu',     
+            'shizuku',   
+            'z16'        
+        ]
+        var index = Math.floor((Math.random() * model_arr.length));
+        var model_name = model_arr[index];
+        L2Dwidget.init({
+            "model": {
+                "jsonPath": "https://unpkg.com/live2d-widget-model-" + model_name + "@@1.0.5/assets/" + model_name + ".model.json",//这是插件模型，可以任意选择想要添加的2d动画
+                "scale": 1
+            },
+            "display": {
+                "superSample": 2,
+                "width": 50,//宽度
+                "height": 120,//高度
+                "position": "right",//位置，right,left
+                "hOffset": 0,
+                "vOffset": 10
+            },
+            "rect": {
+                "opacity": 0.9
+            },
+            "mobile": {
+                "show": false// 手机显示开关，建议关闭
+            },
+            "react": {
+                "opacityDefault": 0.9,  // 设置透明度
+                "opacityOnHover": 0.6   // 鼠标悬浮时设置透明度
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>论坛登录界面</title>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/jquery.easyui-1.4.5.js"></script>
+    <script src="~/Scripts/locale/easyui-lang-zh_CN.js"></script>
+    <link href="~/Content/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/themes/icon.css" rel="stylesheet" />
+    <style type="text/css">
+        body {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .back1 {
+            width: 100%;
+            height: 250px;
+            padding-top: 40px;
+            text-align: center;
+            background-color: deepskyblue;
+        }
+
+        .back2 {
+            width: 100%;
+            height: 500px;
+            background-color: lightgray;
+        }
+
+        .back3 {
+            width: 35%;
+            height: 350px;
+            position: absolute;
+            top: 150px;
+            left: 32%;
+            text-align: center;
+            background-color: white;
+        }
+    </style>
+    <script type="text/javascript">
+        var passshow = false;
+        function showpassword() {
+            //现在展示则隐藏
+            if (passshow) {
+                passshow = false;
+                $("#password").attr("type", "password")
+                $("#showpassbutton").html("显示密码")
+            }
+            //现在隐藏则展示
+            else {
+                passshow = true;
+                $("#password").attr("type", "input")
+                $("#showpassbutton").html("不显示密码")
+            }
+        }
+
+        function dologin() {
+            if ($("#username").val() == "" || $("#password").val() == "") {
+                alert("账号和密码不得为空")
+                return false
+            }
+            $.ajax({
+                url: "/Home/DoLogin",
+                type: "Post",
+                data: {
+                    "username": $("#username").val(),
+                    "password": $("#password").val(),
+                },
+                success: function (result) {
+                    alert(result)
+                    if (result == "登录成功！")
+                        window.location.href = "/Home/Index"
+                }
+            })
+        }
+    </script>
+</head>
+<body>
+    <div class="back1">
+        <label style="color:white;font-size:xx-large;font-weight:bold;">我的MVC论坛</label>
+        <br />
+        <label style="color:white;font-size:x-large;font-weight:bold;">www.mymvcforum.com</label>
+    </div>
+    <div class="back2">
+
+    </div>
+    <div class="back3">
+        <h2 style="color:blue;margin-bottom:30px;margin-top:40px;">登录</h2>
+        <div>
+            <p>
+                <label style="width:15%">用户名</label>
+                <input id="username" style="width:75%;height:25px;border-color:gray;background-color:lightblue;" />
+            </p>
+            <p>
+                <label style="width:15%">密&nbsp;&nbsp;&nbsp;码</label>
+                <input id="password" type="password" style="width:60%;height:25px;border-color:gray;background-color:lightblue;" />
+                <button id="showpassbutton" style="width:15%;height:30px;" onclick="showpassword()">显示</button>
+            </p>
+            <p style="margin-top:30px;margin-bottom:35px;">
+                <button style="width:95%;background-color:blue;color:white;height:35px;" onclick="dologin()">立即登录</button>
+            </p>
+            <p>
+                没有账号？
+                <a href="/Home/Register">立刻注册</a>
+                &nbsp;&nbsp;&nbsp;
+                不想注册？
+                <a href="/Home/Index">返回主界面</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+
